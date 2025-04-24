@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Liga Rolls - Estilo Liga MX</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #d71920;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .tabla-container, .form-container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #ccc;
+    }
+
+    th {
+      background-color: #333;
+      color: white;
+    }
+
+    td.team-cell {
+      display: flex;
+      align-items: center;
+      text-align: left;
+      gap: 10px;
+    }
+
+    img.logo {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    input, button, select {
+      margin: 5px;
+      padding: 8px;
+    }
+
+    .players {
+      background-color: #fff;
+      padding: 10px;
+      margin-bottom: 30px;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .players h4 {
+      margin-top: 0;
+    }
+
+    .goleadores-container {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Liga Rolls - Tabla de Posiciones</h1>
+  </header>
+
+  <div class="form-container">
+    <h3>Agregar Equipo</h3>
+    <input type="text" id="teamName" placeholder="Nombre del equipo">
+    <input type="text" id="logoURL" placeholder="URL del logo">
+    <button onclick="addTeam()">Agregar</button>
+  </div>
+
+  <div class="tabla-container">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Equipo</th>
+          <th>PJ</th>
+          <th>G</th>
+          <th>E</th>
+          <th>P</th>
+          <th>GF</th>
+          <th>GC</th>
+          <th>DG</th>
+          <th>PTS</th>
+          <th>Opciones</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="tabla-container" id="playersContainer"></div>
+
+  <!-- Tabla de Goleadores -->
+  <div class="goleadores-container">
+    <h3>Tabla de Goleo</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Jugador</th>
+          <th>Equipo</th>
+          <th>Goles</th>
+        </tr>
+      </thead>
+      <tbody id="goleadoresTable"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let teams = [];
+
+    function addTeam() {
+      const name = document.getElementById("teamName").value.trim();
+      const logo = document.getElementById("logoURL").value.trim();
+      if (!name || !logo) return alert("Por favor completa nombre y logo");
+
+      const newTeam = {
+        name,
+        logo,
+        pj: 0,
+        g: 0,
+        e: 0,
+        p: 0,
+        gf: 0,
+        gc: 0,
+        players: []
+      };
+
+      teams.push(newTeam);
+      document.getElementById("teamName").value = "";
+      document.getElementById("logoURL").value = "";
+      renderTable();
+      updateGoleadores();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      // Calculamos stats
+      teams.forEach(team => {
+        team.dg = team.gf - team.gc;
+        team.pts = team.g * 3 + team.e;
+      });
+
+      teams.sort((a, b) => b.pts - a.pts || b.dg - a.dg);
+
+      teams.forEach((team, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td class="team-cell"><img class="logo" src="${team.logo}"> ${team.name}</td>
+          <td>${team.pj}</td>
+          <td>${team.g}</td>
+          <td>${team.e}</td>
+          <td>${team.p}</td>
+          <td>${team.gf}</td>
+          <td>${team.gc}</td>
+          <td>${team.dg}</td>
+          <td>${team.pts}</td>
+          <td>
+            <button onclick="editTeam(${index})">Editar</button>
+            <button onclick="showPlayers(${index})">Jugadores</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function editTeam(index) {
+      const team = teams[index];
+      team.pj = parseInt(prompt("Partidos jugados:", team.pj)) || team.pj;
+      team.g = parseInt(prompt("Ganados:", team.g)) || team.g;
+      team.e = parseInt(prompt("Empatados:", team.e)) || team.e;
+      team.p = parseInt(prompt("Perdidos:", team.p)) || team.p;
+      team.gf = parseInt(prompt("Goles a favor:", team.gf)) || team.gf;
+      team.gc = parseInt(prompt("Goles en contra:", team.gc)) || team.gc;
+      renderTable();
+      updateGoleadores();
+    }
+
+    function showPlayers(index) {
+      const container = document.getElementById("playersContainer");
+      const team = teams[index];
+
+      const nombreId = `nombreJugador-${index}`;
+      const posicionId = `posicionJugador-${index}`;
+      const golesId = `golesJugador-${index}`;
+
+      let html = `
+        <div class="players">
+          <h4>Jugadores de ${team.name}</h4>
+          <ul>
+            ${team.players.map((p, i) => `
+              <li>
+                ${p.nombre} (${p.posicion}) - ${p.goles} goles 
+                <button onclick="editPlayer(${index}, ${i})">Editar</button>
+              </li>`).join('')}
+          </ul>
+          <h5>Agregar Jugador</h5>
+          <input type="text" id="${nombreId}" placeholder="Nombre">
+          <input type="text" id="${posicionId}" placeholder="Posición">
+          <input type="number" id="${golesId}" placeholder="Goles">
+          <button onclick="addPlayer(${index})">Agregar Jugador</button>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function addPlayer(index) {
+      const nombre = document.getElementById(`nombreJugador-${index}`).value.trim();
+      const posicion = document.getElementById(`posicionJugador-${index}`).value.trim();
+      const goles = parseInt(document.getElementById(`golesJugador-${index}`).value);
+
+      if (!nombre || !posicion || isNaN(goles)) {
+        alert("Completa todos los campos correctamente.");
+        return;
+      }
+
+      const jugador = { nombre, posicion, goles };
+      teams[index].players.push(jugador);
+
+      showPlayers(index); // Recargar vista con jugadores actualizados
+      renderTable(); // Actualizar la tabla de equipos
+      updateGoleadores(); // Actualizar la tabla de goleadores
+    }
+
+    function editPlayer(teamIndex, playerIndex) {
+      const player = teams[teamIndex].players[playerIndex];
+
+      const nuevoNombre = prompt("Nuevo nombre:", player.nombre);
+      const nuevaPosicion = prompt("Nueva posición:", player.posicion);
+      const nuevosGoles = parseInt(prompt("Nuevos goles:", player.goles));
+
+      if (nuevoNombre && nuevaPosicion && !isNaN(nuevosGoles)) {
+        player.nombre = nuevoNombre;
+        player.posicion = nuevaPosicion;
+        player.goles = nuevosGoles;
+
+        showPlayers(teamIndex); // Recargar vista con cambios
+        renderTable(); // Actualizar tabla de equipos
+        updateGoleadores(); // Actualizar tabla de goleadores
+      } else {
+        alert("Revisa los datos ingresados.");
+      }
+    }
+
+    // Función para actualizar la tabla de goleadores
+    function updateGoleadores() {
+      const goleadoresTable = document.getElementById("goleadoresTable");
+      goleadoresTable.innerHTML = ""; // Limpiar tabla de goleadores
+
+      const goleadores = [];
+
+      // Recopilamos todos los jugadores y sus goles
+      teams.forEach(team => {
+        team.players.forEach(player => {
+          goleadores.push({ nombre: player.nombre, equipo: team.name, goles: player.goles });
+        });
+      });
+
+      // Ordenamos a los goleadores por goles
+      goleadores.sort((a, b) => b.goles - a.goles);
+
+      // Mostramos los 5 mejores goleadores
+      goleadores.slice(0, 5).forEach((g, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${g.nombre}</td>
+          <td>${g.equipo}</td>
+          <td>${g.goles}</td>
+        `;
+        goleadoresTable.appendChild(row);
+      });
+    }
+  </script>
+
+</body>
+</html>
